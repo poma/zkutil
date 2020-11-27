@@ -1,14 +1,15 @@
 // Most of this file is modified from source codes of [Matter Labs](https://github.com/matter-labs)
 use anyhow::format_err;
 use bellman_ce::pairing::Engine;
+use bellman_ce::worker::Worker;
 use bellman_ce::{
     bn256::Bn256,
-    kate_commitment::{Crs, CrsForMonomialForm},
+    kate_commitment::{Crs, CrsForLagrangeForm, CrsForMonomialForm},
     plonk::is_satisfied,
     plonk::is_satisfied_using_one_shot_check,
     plonk::{
         better_cs::cs::PlonkCsWidth4WithNextStepParams, commitments::transcript::keccak_transcript::RollingKeccakTranscript,
-        make_verification_key, prove_by_steps, setup, transpile, transpile_with_gates_count, verify, SetupPolynomials,
+        make_verification_key, prove, prove_by_steps, setup, transpile, transpile_with_gates_count, verify, SetupPolynomials,
         TranspilationVariant, VerificationKey,
     },
     Circuit, ScalarEngine,
@@ -54,21 +55,21 @@ pub fn get_universal_setup_monomial_form<E: Engine>(power_of_two: u32) -> Result
     Ok(Crs::<E, CrsForMonomialForm>::read(&mut buf_reader).map_err(|e| format_err!("Failed to read Crs from setup file: {}", e))?)
 }
 
-pub struct SetupForStepByStepProver<E: Engine> {
+pub struct SetupForProver<E: Engine> {
     setup_polynomials: SetupPolynomials<E, PlonkCsWidth4WithNextStepParams>,
     hints: Vec<(usize, TranspilationVariant)>,
     setup_power_of_two: u32,
     key_monomial_form: Option<Crs<E, CrsForMonomialForm>>,
 }
 
-impl<E: Engine> SetupForStepByStepProver<E> {
-    pub fn prepare_setup_for_step_by_step_prover<C: Circuit<E> + Clone>(circuit: C) -> Result<Self, anyhow::Error> {
+impl<E: Engine> SetupForProver<E> {
+    pub fn prepare_setup_for_prover<C: Circuit<E> + Clone>(circuit: C) -> Result<Self, anyhow::Error> {
         let hints = transpile(circuit.clone())?;
         let setup_polynomials = setup(circuit, &hints)?;
         let size = setup_polynomials.n.next_power_of_two().trailing_zeros();
         let setup_power_of_two = std::cmp::max(size, SETUP_MIN_POW2); // for exit circuit
         let key_monomial_form = Some(get_universal_setup_monomial_form(setup_power_of_two)?);
-        Ok(SetupForStepByStepProver {
+        Ok(SetupForProver {
             setup_power_of_two,
             setup_polynomials,
             hints,
@@ -76,17 +77,24 @@ impl<E: Engine> SetupForStepByStepProver<E> {
         })
     }
 
-    pub fn gen_step_by_step_proof_using_prepared_setup<C: Circuit<E> + Clone>(
+    pub fn gen_proof_using_prepared_setup<C: Circuit<E> + Clone>(
         &self,
         circuit: C,
         vk: &PlonkVerificationKey<E>,
     ) -> Result<(), anyhow::Error> {
-        let proof = prove_by_steps::<_, _, RollingKeccakTranscript<<E as ScalarEngine>::Fr>>(
+        log::info!("self.setup_power_of_two {}", self.setup_power_of_two);
+        let worker = Worker::new();
+        let key_lagrange_form = Crs::<E, CrsForLagrangeForm>::from_powers(
+            self.key_monomial_form.as_ref().expect("Setup should have universal setup struct"),
+            (1 << self.setup_power_of_two) as usize,
+            &worker,
+        );
+        let proof = prove::<_, _, RollingKeccakTranscript<<E as ScalarEngine>::Fr>>(
             circuit,
             &self.hints,
             &self.setup_polynomials,
-            None,
             self.key_monomial_form.as_ref().expect("Setup should have universal setup struct"),
+            &key_lagrange_form,
         )?;
         log::info!("Proof generated");
 
@@ -153,7 +161,7 @@ pub fn simple_plonk_test() {
 
     let vk = VerificationKey::<Bn256, PlonkCsWidth4WithNextStepParams>::read(File::open(vk_path).expect("read vk file err"))
         .expect("read vk err");
-    let setup = SetupForStepByStepProver::prepare_setup_for_step_by_step_prover(circuit).expect("prepare err");
+    let setup = SetupForProver::prepare_setup_for_prover(circuit).expect("prepare err");
     let circuit_with_witness = CircomCircuit {
         r1cs: r1cs_from_json_file::<Bn256>(&circuit_file),
         witness: Some(witness_from_json_file::<Bn256>(witness_file)),
@@ -174,7 +182,7 @@ pub fn simple_plonk_test() {
     }
 
     setup
-        .gen_step_by_step_proof_using_prepared_setup(circuit_with_witness, &PlonkVerificationKey(vk))
+        .gen_proof_using_prepared_setup(circuit_with_witness, &PlonkVerificationKey(vk))
         .expect("proof err");
     log::info!("simple_plonk_test done");
 }

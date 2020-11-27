@@ -82,11 +82,10 @@ impl<E: Engine> SetupForProver<E> {
         circuit: C,
         vk: &PlonkVerificationKey<E>,
     ) -> Result<(), anyhow::Error> {
-        log::info!("self.setup_power_of_two {}", self.setup_power_of_two);
         let worker = Worker::new();
         let key_lagrange_form = Crs::<E, CrsForLagrangeForm>::from_powers(
             self.key_monomial_form.as_ref().expect("Setup should have universal setup struct"),
-            (1 << self.setup_power_of_two) as usize,
+            (1024) as usize,
             &worker,
         );
         let proof = prove::<_, _, RollingKeccakTranscript<<E as ScalarEngine>::Fr>>(

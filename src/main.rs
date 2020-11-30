@@ -193,18 +193,13 @@ fn prove(opts: ProveOpts) {
 }
 
 fn verify(opts: VerifyOpts) {
-    let correct: bool;
-    match opts.proof_system {
-        ProofSystem::Plonk => {
-            let vk = io::load_verification_key::<Bn256>(&opts.vk);
-            let proof = io::load_proof::<Bn256>(&opts.proof);
-            correct = plonk_verify(&vk, &proof).unwrap();
-        }
-        _ => {
-            panic!("Deprecated");
-        }
+    if opts.proof_system != ProofSystem::Plonk {
+        panic!("Deprecated");
     }
 
+    let vk = io::load_verification_key::<Bn256>(&opts.vk);
+    let proof = io::load_proof::<Bn256>(&opts.proof);
+    let correct = plonk_verify(&vk, &proof).unwrap();
     if correct {
         println!("Proof is correct");
     } else {

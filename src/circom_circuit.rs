@@ -499,6 +499,19 @@ pub fn witness_from_json<E: Engine, R: Read>(reader: R) -> Vec<E::Fr> {
     witness.into_iter().map(|x| E::Fr::from_str(&x).unwrap()).collect::<Vec<E::Fr>>()
 }
 
+pub fn witness_from_bin_file<E: Engine>(filename: &str) -> Result<Vec<E::Fr>, std::io::Error> {
+    let reader = OpenOptions::new()
+        .read(true)
+        .open(filename)
+        .expect("unable to open.");
+    witness_from_bin::<E, BufReader<File>>(BufReader::new(reader))
+}
+
+pub fn witness_from_bin<E: Engine, R: Read>(reader: R) -> Result<Vec<E::Fr>, std::io::Error> {
+    let file = crate::wtns_reader::read::<E, R>(reader)?;
+    Ok(file.witness)
+}
+
 pub fn r1cs_from_json_file<E: Engine>(filename: &str) -> R1CS<E> {
     let reader = OpenOptions::new()
         .read(true)

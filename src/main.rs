@@ -6,7 +6,10 @@ use std::fs;
 use std::fs::File;
 use std::path::Path;
 use clap::Clap;
-use bellman_ce::pairing::bn256::Bn256;
+use bellman_ce::pairing::{
+    Engine,
+    bn256::Bn256
+};
 use zkutil::circom_circuit::{
     prove as prove2,
     verify as verify2,
@@ -16,6 +19,7 @@ use zkutil::circom_circuit::{
     r1cs_from_json_file,
     r1cs_from_bin_file,
     witness_from_json_file,
+    witness_from_bin_file,
     load_proof_json_file,
     load_inputs_json_file,
     create_verifier_sol_file,
@@ -56,9 +60,9 @@ struct ProveOpts {
     /// Circuit R1CS or JSON file [default: circuit.r1cs|circuit.json]
     #[clap(short = "c", long = "circuit")]
     circuit: Option<String>,
-    /// Witness JSON file
-    #[clap(short = "w", long = "witness", default_value = "witness.json")]
-    witness: String,
+    /// Witness JSON file [default: witness.wtns|witness.json]
+    #[clap(short = "w", long = "witness")]
+    witness: Option<String>,
     /// Output file for proof JSON
     #[clap(short = "r", long = "proof", default_value = "proof.json")]
     proof: String,
@@ -161,14 +165,34 @@ fn resolve_circuit_file(filename: Option<String>) -> String {
     }
 }
 
+fn load_witness<E: Engine>(filename: &str) -> Vec<E::Fr> {
+    if filename.ends_with("json") {
+        witness_from_json_file::<E>(filename)
+    } else {
+        witness_from_bin_file::<E>(filename).unwrap()
+    }
+}
+
+fn resolve_witness_file(filename: Option<String>) -> String {
+    match filename {
+        Some(s) => s,
+        None => if Path::new("witness.wtns").exists() || !Path::new("witness.json").exists() {
+            "witness.wtns".to_string()
+        } else {
+            "witness.json".to_string()
+        }
+    }
+}
+
 fn prove(opts: ProveOpts) {
     let rng = create_rng();
     let params = load_params_file(&opts.params);
     let circuit_file = resolve_circuit_file(opts.circuit);
+    let witness_file = resolve_witness_file(opts.witness);
     println!("Loading circuit from {}...", circuit_file);
     let circuit = CircomCircuit {
         r1cs: load_r1cs(&circuit_file),
-        witness: Some(witness_from_json_file::<Bn256>(&opts.witness)),
+        witness: Some(load_witness::<Bn256>(&witness_file)),
         wire_mapping: None,
     };
     println!("Proving...");

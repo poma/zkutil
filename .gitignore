@@ -3,6 +3,7 @@
 /verifier.sol
 /circuit.json
 /witness.json
+/witness.wtns
 /circuit.cpp
 /circuit.r1cs
 /circuit.sym

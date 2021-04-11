@@ -15,7 +15,7 @@ use zkutil::circom_circuit::{
     proof_to_json_file,
     r1cs_from_json_file,
     r1cs_from_bin_file,
-    witness_from_json_file,
+    witness_from_file,
     load_proof_json_file,
     load_inputs_json_file,
     create_verifier_sol_file,
@@ -57,7 +57,7 @@ struct ProveOpts {
     #[clap(short = "c", long = "circuit")]
     circuit: Option<String>,
     /// Witness JSON file
-    #[clap(short = "w", long = "witness", default_value = "witness.json")]
+    #[clap(short = "w", long = "witness", default_value = "witness.wtns")]
     witness: String,
     /// Output file for proof JSON
     #[clap(short = "r", long = "proof", default_value = "proof.json")]
@@ -166,9 +166,10 @@ fn prove(opts: ProveOpts) {
     let params = load_params_file(&opts.params);
     let circuit_file = resolve_circuit_file(opts.circuit);
     println!("Loading circuit from {}...", circuit_file);
+
     let circuit = CircomCircuit {
         r1cs: load_r1cs(&circuit_file),
-        witness: Some(witness_from_json_file::<Bn256>(&opts.witness)),
+        witness: Some(witness_from_file::<Bn256>(&opts.witness)),
         wire_mapping: None,
     };
     println!("Proving...");

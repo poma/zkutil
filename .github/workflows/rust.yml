@@ -55,16 +55,11 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: zkutil
-      - name: Cache node_modules
-        uses: actions/cache@v1
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-json
+      - run: chmod +x ./zkutil/zkutil
       - name: Test
         run: |
           npm init -y
           npm install circom@0.0.35 snarkjs@0.1.20
-          chmod +x ./zkutil/zkutil
           npx circom
           ./zkutil/zkutil setup
           ./zkutil/zkutil export-keys
@@ -84,16 +79,11 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: zkutil
-      - name: Cache node_modules
-        uses: actions/cache@v1
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-r1cs
+      - run: chmod +x ./zkutil/zkutil
       - name: Test
         run: |
           npm init -y
           npm install circom snarkjs
-          chmod +x ./zkutil/zkutil
           npx circom -rw
           ./zkutil/zkutil setup
           ./zkutil/zkutil export-keys

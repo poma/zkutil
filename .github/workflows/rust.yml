@@ -92,16 +92,16 @@ jobs:
       - name: Test
         run: |
           npm init -y
-          npm install circom snarkjs@0.1.31
+          npm install circom snarkjs
           chmod +x ./zkutil/zkutil
           npx circom -rw
           ./zkutil/zkutil setup
           ./zkutil/zkutil export-keys
           ./zkutil/zkutil generate-verifier
-          npx snarkjs calculatewitness
+          npx snarkjs wc
           ./zkutil/zkutil prove
           ./zkutil/zkutil verify
-          npx snarkjs verify
+          npx snarkjs g16v
 
   publish:
     runs-on: ubuntu-latest

@@ -110,10 +110,13 @@ struct VerifyingKeyJson {
     #[serde(rename = "IC")]
     pub ic: Vec<Vec<String>>,
     pub vk_alfa_1: Vec<String>,
+    pub vk_alpha_1: Vec<String>,
     pub vk_beta_2: Vec<Vec<String>>,
     pub vk_gamma_2: Vec<Vec<String>>,
     pub vk_delta_2: Vec<Vec<String>>,
     pub vk_alfabeta_12: Vec<Vec<Vec<String>>>,
+    pub vk_alphabeta_12: Vec<Vec<Vec<String>>>,
+    pub curve: String,
     pub protocol: String,
     #[serde(rename = "nPublic")]
     pub inputs_count: usize,
@@ -471,11 +474,14 @@ pub fn verification_key_json(params: &Parameters<Bn256>) -> Result<String, serde
     let verification_key = VerifyingKeyJson {
         ic: params.vk.ic.iter().map(|e| p1_to_vec(e)).collect_vec(),
         vk_alfa_1: p1_to_vec(&params.vk.alpha_g1),
+        vk_alpha_1: p1_to_vec(&params.vk.alpha_g1),
         vk_beta_2: p2_to_vec(&params.vk.beta_g2),
         vk_gamma_2: p2_to_vec(&params.vk.gamma_g2),
         vk_delta_2: p2_to_vec(&params.vk.delta_g2),
         vk_alfabeta_12: pairing_to_vec(&Bn256::pairing(params.vk.alpha_g1, params.vk.beta_g2)),
+        vk_alphabeta_12: pairing_to_vec(&Bn256::pairing(params.vk.alpha_g1, params.vk.beta_g2)),
         inputs_count: params.vk.ic.len() - 1,
+        curve: String::from("BN254"),
         protocol: String::from("groth"),
     };
     serde_json::to_string_pretty(&verification_key)

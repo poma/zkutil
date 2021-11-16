@@ -4,7 +4,7 @@ extern crate rand;
 
 use std::str;
 use std::fs::{self, OpenOptions, File};
-use std::io::{Read, BufReader};
+use std::io::{BufReader, Read, Seek};
 use std::collections::BTreeMap;
 use std::iter::repeat;
 use std::sync::Arc;
@@ -548,7 +548,7 @@ pub fn r1cs_from_json<E: Engine, R: Read>(reader: R) -> R1CS<E> {
     }
 }
 
-pub fn r1cs_from_bin<R: Read>(reader: R) -> Result<(R1CS<Bn256>, Vec<usize>), std::io::Error> {
+pub fn r1cs_from_bin<R: Read + Seek>(reader: R) -> Result<(R1CS<Bn256>, Vec<usize>), std::io::Error> {
     let file = crate::r1cs_reader::read(reader)?;
     let num_inputs = (1 + file.header.n_pub_in + file.header.n_pub_out) as usize;
     let num_variables = file.header.n_wires as usize;

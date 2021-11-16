@@ -1,6 +1,6 @@
 #![allow(unused_variables, dead_code)]
 use byteorder::{ReadBytesExt, LittleEndian};
-use std::{collections::HashMap, io::{BufReader, Cursor, Error, ErrorKind, Read, Result, Seek, SeekFrom}};
+use std::{collections::HashMap, io::{Error, ErrorKind, Read, Result, Seek, SeekFrom}};
 use bellman_ce::pairing::{
     Engine,
     bn256::Bn256,
@@ -9,6 +9,8 @@ use bellman_ce::pairing::{
     }
 };
 use crate::circom_circuit::Constraint;
+#[cfg(test)]
+use std::io::{BufReader, Cursor};
 
 pub struct Header {
     pub field_size: u32,
